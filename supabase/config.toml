@@ -1,0 +1,2 @@
+[functions.read-gift]
+verify_jwt = false

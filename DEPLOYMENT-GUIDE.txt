@@ -1,0 +1,144 @@
+﻿BLOOM & LETTER — FREE DEPLOYMENT GUIDE
+Vercel Hobby + Supabase Free | November 26, 2026
+
+This setup uses the free .vercel.app address and a hosted Supabase project.
+Vercel Hobby is for personal, non-commercial projects. Check its Fair Use
+Guidelines before enabling the optional GCash support page for fundraising or
+other payments. Leave payment details blank if you are unsure about eligibility.
+Supabase Free has quotas and may pause after a week of low activity. You can
+resume a paused project from the Supabase dashboard.
+
+1. PREPARE THE PROJECT
+
+Open PowerShell in the folder containing package.json and supabase/.
+
+    node --version
+    npm ci
+    npm test
+    npm run build
+
+Use Node.js 22 or newer. Create an empty personal GitHub repository, then run
+the following, replacing YOUR_USERNAME and the repository name as needed.
+If you already have a repository and remote, commit and push to that remote.
+
+    git init
+    git add .
+    git status --short
+    git commit -m "Deploy Bloom and Letter"
+    git branch -M main
+    git remote add origin https://github.com/YOUR_USERNAME/bloom-and-letter.git
+    git push -u origin main
+
+Before committing, confirm that .env, .env.local, database passwords, SMTP
+credentials and Supabase secret/service-role keys are absent from staged files.
+The blank .env.example belongs in the repository.
+
+2. CREATE THE SUPABASE BACKEND
+
+Create a project in a Free organization at https://supabase.com/dashboard.
+Choose a nearby region and store its database password securely. Find the
+project reference ID in Project Settings or the dashboard URL. Find the
+project API URL and publishable key in Connect or Settings > API Keys.
+
+Run these commands from the project folder. Replace YOUR_PROJECT_REF with the
+reference ID. If npm asks to install the CLI, accept the prompt.
+
+    npx supabase@2 login
+    npx supabase@2 link --project-ref YOUR_PROJECT_REF
+    npx supabase@2 db push
+    npx supabase@2 functions deploy read-gift --use-api --no-verify-jwt
+
+Check the target before confirming db push. These commands use CLI v2 and
+deploy to the hosted project without running a local Supabase stack. The
+migrations create the gift tables, access policies, private photo bucket and
+bouquet-note support. Check that the gifts and gift_publications tables,
+letter-photos bucket and read-gift function appear in the dashboard.
+
+The JWT flag applies only to read-gift, so recipients without accounts can
+open gifts. The function checks the gift token, delivery window, revocation
+and optional PIN. Supabase provides its server credentials at runtime.
+
+3. DEPLOY THE FRONTEND ON VERCEL
+
+At https://vercel.com, use a personal Hobby account and import the GitHub
+repository with Add New > Project. Select the Vite preset and leave Root
+Directory at the repository root. The build command is npm run build and
+the output directory is dist. Keep the repository's vercel.json so a direct
+gift link loads even after a refresh.
+
+Add these environment variables for Production before clicking Deploy.
+
+    VITE_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+    VITE_SUPABASE_ANON_KEY=YOUR_SUPABASE_PUBLISHABLE_KEY
+
+Use the actual project API URL and publishable key copied from Supabase. The
+legacy anon key also works. VITE_ variables are shipped to browsers, so keep
+secret and service-role keys out of Vercel's frontend variables.
+
+After deploying, copy your stable production domain from Vercel's Domains
+page, not the unique URL for a single deployment. Add the third Production
+environment variable using that exact origin, without a path.
+
+    VITE_PUBLIC_ORIGIN=https://YOUR-SITE.vercel.app
+
+Redeploy from Vercel's Deployments page. Vite reads these variables at build
+time, so edits only take effect after a new deployment. The public origin
+is used for the gift links and QR codes you share.
+
+4. SET UP MAGIC-LINK SIGN-IN
+
+In Supabase Authentication > URL Configuration, set Site URL to your stable
+production origin. Add these exact Redirect URLs, substituting your domain.
+
+    https://YOUR-SITE.vercel.app/create
+    https://YOUR-SITE.vercel.app/letters
+
+Enable the Email provider and allow new users to sign up if other people
+should be able to create accounts. For an owner-only trial, use the email
+address on your Supabase organization account. Supabase's built-in sender
+only delivers to organization team addresses and currently allows two
+emails per hour across the project. Recipients can open published gifts
+without signing in.
+
+For anyone to create gifts, configure custom SMTP in Supabase Auth settings.
+You can use a free transactional email allowance, such as Resend's free
+tier, if you already control a domain you can verify with the provider.
+A sending domain can cost money if you do not already have one. Your
+website can still stay on .vercel.app. Verify the sending domain with the
+provider, then enter its SMTP host, port, username, password and From
+address in Supabase. Send a test magic link to a non-team email address.
+
+5. CHECK THE LIVE SITE
+
+- Open the stable production URL and sign in with an allowed email address.
+- Create a bouquet with one whole-bouquet note, save a draft and reload.
+- Publish it. Copy the gift link and scan the downloaded QR code on a phone.
+- In a private window, open the gift URL directly and refresh. Check the
+  bouquet note and letter. Try a separate gift with individual flower notes.
+- Revoke a test gift and confirm the link stops working in a private window.
+- If using a PIN or photo, test those features on a published gift too.
+
+If sign-in sends you to the wrong page, check the Supabase Site URL and both
+redirect entries. If a valid gift fails in a private window, check that the
+migrations and Edge Function were deployed to the same Supabase project, then
+check the function logs. If the QR points to localhost or a preview URL,
+correct VITE_PUBLIC_ORIGIN, redeploy, then download a new QR code.
+
+6. PUBLISH UPDATES
+
+Push frontend changes to Vercel's production branch. For changes to database
+migrations or read-gift, repeat the relevant Supabase deploy command from
+step 2. If you decide to enable GCash and it fits your hosting plan, save
+your public receive-payment PNG as public/gcash-qr.png and push it. The
+Buy Me a Coffee page will show it after Vercel rebuilds.
+
+OFFICIAL REFERENCES
+
+Vercel Hobby: https://vercel.com/docs/plans/hobby
+Vercel Fair Use: https://vercel.com/docs/limits/fair-use-guidelines
+Vercel environment variables: https://vercel.com/docs/environment-variables/managing-environment-variables
+Supabase Free plan: https://supabase.com/pricing
+Supabase CLI: https://supabase.com/docs/reference/cli/introduction
+Supabase Edge Function deployment: https://supabase.com/docs/guides/functions/deploy
+Supabase email and custom SMTP: https://supabase.com/docs/guides/auth/auth-smtp
+Resend free tier and verified sending domains: https://resend.com/changelog/three-domains-on-the-free-tier
