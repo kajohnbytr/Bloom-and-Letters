@@ -1,5 +1,5 @@
-﻿import {useId} from 'react'
-import {flowers,wraps,ribbons,type Gift} from './model'
+import {useId,useRef} from 'react'
+import {flowers,wraps,ribbons,type Gift,type StemPosition} from './model'
 
 export function Flower({type}: {type:number}) {
   const {color} = flowers[type]
@@ -22,30 +22,78 @@ export function Flower({type}: {type:number}) {
   </>
 }
 
-export function Bouquet({gift,onPick}: {gift:Gift;onPick?:(index:number)=>void}) {
+const foldArt = {
+  'Classic fold':['M81 172Q177 126 280 174L183 337Z','M76 174Q139 204 183 339Q213 232 285 174L234 302L183 352L126 302Z','M76 174L182 245L285 174M182 245L183 338'],
+  'Layered fan':['M54 159L103 170L112 142L179 158L237 142L249 169L306 157L183 347Z','M62 178L120 179L184 225L248 178L298 177L232 317L183 354L131 318Z','M62 178L183 270L298 177M120 179L183 270L248 178'],
+  'Scalloped sleeve':['M78 166Q100 142 123 160Q148 136 173 151Q199 132 222 151Q248 138 281 164L183 346Z','M75 182Q91 164 113 187Q134 170 154 198Q178 180 198 197Q223 173 243 185Q266 162 285 178L231 313Q210 329 183 353Q153 328 132 316Z','M109 208Q178 250 250 204M183 251L183 339'],
+  'Open cone':['M61 175Q183 124 301 174L183 349Z','M69 179Q207 242 294 175L183 354Z','M71 180Q202 271 183 352']
+}
+
+export function Bouquet({gift,onPick,onMove}: {gift:Gift;onPick?:(index:number)=>void;onMove?:(index:number,position:StemPosition)=>void}) {
   const patternId=useId()
-  return <svg viewBox="0 0 360 390" className="bouquet" role={onPick?"group":"img"} aria-label={gift.flowers.length ? gift.arrangement+' bouquet with '+gift.flowers.length+' stems' : 'Empty bouquet'}>
-    <defs><pattern id={patternId} width="26" height="24" patternUnits="userSpaceOnUse"><rect width="26" height="24" fill={wraps['Vintage floral']}/><path d="M11 11q-10-7-4-9q8 0 4 9q8-8 11-2q0 6-11 2q7 8 0 10q-6-2 0-10" fill="#c5848c"/></pattern></defs>
+  const svg=useRef<SVGSVGElement>(null)
+  const drag=useRef<{pointer:number;index:number;dx:number;dy:number}|null>(null)
+  const [back,front,creases]=foldArt[gift.fold as keyof typeof foldArt]||foldArt['Classic fold']
+  const color=wraps[gift.wrap as keyof typeof wraps]
+  const patterned=['Vintage floral','Lavender gingham','Midnight stars','Botanical vellum','Rose polka dots'].includes(gift.wrap)
+  const paper=patterned?'url(#'+patternId+')':color
+  const stems=gift.flowers.map((flower,index)=>{
+    const spread=gift.arrangement==='Elegant vertical'?79:gift.arrangement==='Wildflower'?145:119
+    const fraction=gift.flowers.length===1?0:index/(gift.flowers.length-1)*2-1
+    const x=180+spread*fraction
+    const y=92+Math.abs(fraction)*47+(gift.arrangement==='Wildflower'?(index%3)*23:gift.arrangement==='Romantic mixed'?(index%4)*12:(index%2)*11)
+    return {...flower,...(flower.position||{x,y}),angle:fraction*19}
+  })
+  function point(clientX:number,clientY:number){
+    const matrix=svg.current?.getScreenCTM()
+    return matrix?new DOMPoint(clientX,clientY).matrixTransform(matrix.inverse()):null
+  }
+  function move(index:number,x:number,y:number){
+    onMove?.(index,{x:Math.round(Math.max(34,Math.min(326,x))),y:Math.round(Math.max(38,Math.min(181,y)))})
+  }
+  return <svg ref={svg} viewBox="0 0 360 390" className="bouquet" role={onPick||onMove?'group':'img'} aria-label={gift.flowers.length ? gift.arrangement+' bouquet with '+gift.flowers.length+' stems' : 'Empty bouquet'}>
+    <defs><pattern id={patternId} width="26" height="24" patternUnits="userSpaceOnUse">
+      <rect width="26" height="24" fill={color}/>
+      {gift.wrap==='Vintage floral'&&<path d="M11 11q-10-7-4-9q8 0 4 9q8-8 11-2q0 6-11 2q7 8 0 10q-6-2 0-10" fill="#c5848c"/>}
+      {gift.wrap==='Lavender gingham'&&<path d="M0 5h26M0 17h26M5 0v24M17 0v24" stroke="#8966a8" strokeWidth="5" opacity=".27"/>}
+      {gift.wrap==='Midnight stars'&&<path d="M8 2l1.4 4.6L14 8l-4.6 1.4L8 14 6.6 9.4 2 8l4.6-1.4ZM20 14l1 3 3 1-3 1-1 3-1-3-3-1 3-1Z" fill="#ecd698"/>}
+      {gift.wrap==='Botanical vellum'&&<path d="M4 20Q12 13 20 4M10 15Q3 8 12 8Q16 12 10 15M14 11Q19 6 23 10Q21 15 14 11" stroke="#6c8666" fill="none"/>}
+      {gift.wrap==='Rose polka dots'&&<g fill="#a9536a"><circle cx="6" cy="6" r="2"/><circle cx="19" cy="18" r="2"/></g>}
+    </pattern></defs>
     <ellipse cx="180" cy="355" rx="94" ry="13" fill="#775e43" opacity=".12"/>
-    <path d="M81 172Q177 126 280 174L183 337Z" fill={wraps[gift.wrap as keyof typeof wraps]} stroke="#8d735c"/>
-    {gift.flowers.map((flower,index)=>{
-      const spread = gift.arrangement==='Elegant vertical'?79:gift.arrangement==='Wildflower'?145:119
-      const fraction = gift.flowers.length===1?0:index/(gift.flowers.length-1)*2-1
-      const x = 180+spread*fraction
-      const y = 92+Math.abs(fraction)*47 + (gift.arrangement==='Wildflower'?(index%3)*23:gift.arrangement==='Romantic mixed'?(index%4)*12:(index%2)*11)
-      return <g key={index} className="bouquet-stem" style={{animationDelay:index*30+'ms'}}><path d={'M'+x+' '+y+'Q'+x+' 200 180 302'} stroke="#778653" strokeWidth="3" fill="none"/><g transform={'translate('+x+' '+y+') rotate('+fraction*19+') scale(.84)'}><Flower type={flower.type}/></g></g>
-    })}
-    <path d="M76 174Q139 204 183 339Q213 232 285 174L234 302L183 352L126 302Z" fill={gift.wrap==='Vintage floral'?'url(#'+patternId+')':wraps[gift.wrap as keyof typeof wraps]} stroke="#9c7f65"/>
-    <path d="M76 174L182 245L285 174M182 245L183 338" fill="none" stroke="#8c6955" opacity=".45"/>
+    <path d={back} fill={paper} stroke="#8d735c"/>
+    <path d={back} fill="#3d2c2b" opacity=".12"/>
+    {stems.map(({x,y,angle,type},index)=><g key={index} className="bouquet-stem" style={{animationDelay:index*30+'ms'}}><path d={'M'+x+' '+y+'Q'+x+' 200 180 302'} stroke="#778653" strokeWidth="3" fill="none"/><g transform={'translate('+x+' '+y+') rotate('+angle+') scale(.84)'}><Flower type={type}/></g></g>)}
+    <path d={front} fill={paper} stroke="#9c7f65"/>
+    <path d={creases} fill="none" stroke={gift.wrap==='Midnight stars'?'#cabeac':'#8c6955'} opacity=".55"/>
     <path d="M182 285C105 241 133 308 177 289L149 332L173 325L184 291L210 329L226 323L188 286C240 312 258 246 182 285Z" fill={ribbons[gift.ribbon as keyof typeof ribbons]} stroke="#805165" strokeWidth="1.1"/>
     <circle cx="183" cy="286" r="8" fill={ribbons[gift.ribbon as keyof typeof ribbons]}/>
-    {onPick&&gift.flowers.map((flower,index)=>{
-      const spread = gift.arrangement==='Elegant vertical'?79:gift.arrangement==='Wildflower'?145:119
-      const fraction = gift.flowers.length===1?0:index/(gift.flowers.length-1)*2-1
-      const x = 180+spread*fraction
-      const y = 92+Math.abs(fraction)*47 + (gift.arrangement==='Wildflower'?(index%3)*23:gift.arrangement==='Romantic mixed'?(index%4)*12:(index%2)*11)
-      return <circle key={index} className="flower-hit" cx={x} cy={y} r="17" fill="transparent" role="button" tabIndex={0} aria-label={flowers[flower.type].name+' stem '+(index+1)} onClick={()=>onPick(index)} onKeyDown={event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();onPick(index)}}}/>
-    })}
+    {(onPick||onMove)&&stems.map(({x,y,type},index)=><circle key={index} className={onMove?'flower-hit movable-flower':'flower-hit'} cx={x} cy={y} r="19" fill="transparent" role="button" tabIndex={0} aria-label={(onMove?'Move ':'')+flowers[type].name+' stem '+(index+1)}
+      onClick={()=>onPick?.(index)}
+      onPointerDown={event=>{
+        if(!onMove||event.button!==0||drag.current)return
+        const p=point(event.clientX,event.clientY)
+        if(!p)return
+        drag.current={pointer:event.pointerId,index,dx:p.x-x,dy:p.y-y}
+        event.currentTarget.setPointerCapture(event.pointerId)
+      }}
+      onPointerMove={event=>{
+        const active=drag.current
+        if(!active||active.pointer!==event.pointerId||active.index!==index)return
+        const p=point(event.clientX,event.clientY)
+        if(p)move(index,p.x-active.dx,p.y-active.dy)
+      }}
+      onLostPointerCapture={event=>{if(drag.current?.pointer===event.pointerId)drag.current=null}}
+      onKeyDown={event=>{
+        if(onMove){
+          const direction={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[event.key]
+          if(direction){
+            event.preventDefault()
+            const step=event.shiftKey?12:4
+            move(index,x+direction[0]*step,y+direction[1]*step)
+          }
+        }else if(event.key==='Enter'||event.key===' '){event.preventDefault();onPick?.(index)}
+      }}/>)}
   </svg>
 }
 

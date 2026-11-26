@@ -11,14 +11,16 @@ export const flowers = [
   {name:'Peony', meaning:'Romance and prosperity', description:'Soft ruffles in layers of pink.', color:'#d686a1'},
   {name:"Baby's Breath", meaning:'Everlasting love', description:'Little clouds of ivory blossoms.', color:'#fff7dd'}
 ]
-export const wraps = {'Classic cream':'#e9d8ad','Blush pink':'#e9b8b8','Kraft paper':'#ba916e','Sage green':'#a9b498','Vintage floral':'#e5d8b9'}
+export const wraps = {'Classic cream':'#e9d8ad','Blush pink':'#e9b8b8','Kraft paper':'#ba916e','Sage green':'#a9b498','Vintage floral':'#e5d8b9','Lavender gingham':'#e9dcee','Midnight stars':'#313858','Botanical vellum':'#dce6cb','Rose polka dots':'#f0c9cd'}
+export const folds=['Classic fold','Layered fan','Scalloped sleeve','Open cone']
+export type StemPosition={x:number;y:number}
 export const ribbons = {Pink:'#bf718a',Burgundy:'#802c49',White:'#fff9ed',Lavender:'#a992c5',Sage:'#738666'}
 export const arrangements = ['Classic rounded','Wildflower','Elegant vertical','Romantic mixed']
 export const themes = ['Classic handwritten','Vintage parchment','Minimalist love letter','Floral stationery','Romantic pink']
 export const fonts = ['Caveat','Cormorant Garamond','DM Sans']
 export const colors = {'Warm ink':'#40312d','Dusty rose':'#773749','Forest':'#344d38'}
 export const empty = () => ({
-  flowers:[] as {type:number;note:string}[], wrap:'Classic cream', ribbon:'Pink', arrangement:'Classic rounded',
+  flowers:[] as {type:number;note:string;position?:StemPosition}[], fold:folds[0], wrap:'Classic cream', ribbon:'Pink', arrangement:'Classic rounded',
   noteMode:'flowers' as 'flowers'|'bouquet', bouquetNote:'', recipient:'', sender:'', title:'', body:'', theme:themes[0], font:fonts[0], size:26, align:'left',
   color:colors['Warm ink'] as string, decoration:true, date:'', photo:'', scheduled:'', expires:''
 })

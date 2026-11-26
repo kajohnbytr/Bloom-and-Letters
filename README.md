@@ -57,3 +57,20 @@ Save your public GCash receive-payment QR image as `public/gcash-qr.png`. Restar
 If you prefer a different filename, set `VITE_GCASH_QR_URL` to the public path, such as `/my-gcash-qr.jpg`, and place that file in `public/`. The optional `VITE_GCASH_NAME` and `VITE_GCASH_NUMBER` values are visible to visitors when set.
 
 For an existing Supabase deployment, run `supabase db push` and redeploy `read-gift` when releasing the bouquet note options.
+
+## Custom bouquets and recipient keepsakes
+
+Drag a flower in the bouquet preview to move it. With the flower focused,
+use arrow keys for fine adjustments or Shift + arrow keys for larger moves.
+Reset flower positions returns to the selected preset. Wrapping paper and
+wrapper shape can be selected separately.
+
+The letter reveal includes the same bouquet that the sender arranged. The
+optional keepsake camera uses a secure connection (HTTPS or localhost) and
+requires browser permission. Recipients can use the device photo picker if
+the live camera is unavailable. Keepsake photos stay in the browser until
+downloaded and are never uploaded.
+
+For an existing deployment, apply the bouquet arrangement migration and
+redeploy read-gift before pushing the updated frontend. See Step 10 of
+DEPLOYMENT-GUIDE.txt.

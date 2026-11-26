@@ -1,12 +1,12 @@
-﻿import assert from 'node:assert/strict'
+import assert from 'node:assert/strict'
 import {chromium} from 'playwright'
 
-const browser=await chromium.launch({channel:process.env.BROWSER_CHANNEL||'msedge'})
+const browser=await chromium.launch({channel:process.env.BROWSER_CHANNEL||'msedge',args:['--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream']})
 const origin=process.env.TEST_ORIGIN||'http://localhost:4173'
 const token='N'.repeat(43)
 const envelope={
-  flowers:[{type:0,note:'For our first garden walk'},{type:3,note:''}],
-  wrap:'Vintage floral',ribbon:'Lavender',arrangement:'Wildflower',recipient:'Lina',sender:'Jamie'
+  flowers:[{type:0,note:'For our first garden walk',position:{x:90,y:110}},{type:3,note:''}],
+  wrap:'Midnight stars',fold:'Layered fan',ribbon:'Lavender',arrangement:'Wildflower',recipient:'Lina',sender:'Jamie'
 }
 const letter={
   ...envelope,title:'Thinking of you',body:'One line.\n\nA second paragraph.',
@@ -45,6 +45,14 @@ try {
   await page.getByRole('button',{name:'Open the letter'}).click()
   await page.getByRole('heading',{name:'Thinking of you'}).waitFor()
   assert.equal(await page.locator('.letter-body').textContent(),letter.body)
+  await page.locator('.held-bouquet').getByRole('img',{name:'Wildflower bouquet with 2 stems'}).waitFor()
+  assert.equal(await page.locator('video').isVisible(),false)
+  await page.getByRole('button',{name:'Open Camera'}).click()
+  await page.getByRole('button',{name:'Take Photo',exact:true}).click()
+  await page.getByRole('img',{name:'Your keepsake photo'}).waitFor()
+  assert.match(await page.getByRole('link',{name:'Download Photo'}).getAttribute('href'),/^blob:/)
+  await page.getByRole('button',{name:'Remove Photo'}).click()
+  assert.equal(await page.getByRole('img',{name:'Your keepsake photo'}).count(),0)
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true)
   await page.reload()
   await page.getByRole('heading',{name:'Enter the gift PIN'}).waitFor()

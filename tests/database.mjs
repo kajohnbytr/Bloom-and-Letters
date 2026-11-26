@@ -21,6 +21,7 @@ await db.exec(`
 `)
 await db.exec(await readFile(new URL('../supabase/migrations/20261126000100_gifts.sql',import.meta.url),'utf8'))
 await db.exec(await readFile(new URL('../supabase/migrations/20261126000200_bouquet_notes.sql',import.meta.url),'utf8'))
+await db.exec(await readFile(new URL('../supabase/migrations/20261126000300_bouquet_arrangement.sql',import.meta.url),'utf8'))
 
 const owner='a0000000-0000-4000-8000-000000000001'
 const other='a0000000-0000-4000-8000-000000000002'
@@ -70,14 +71,17 @@ assert.equal(published.gift.flowers[0].note,'My favorite memory')
 assert.equal(published.gift.flowers[0].extra,undefined)
 assert.equal(published.gift.private,undefined)
 await act('authenticated',owner)
-const bouquetGift={...gift,noteMode:'bouquet',bouquetNote:'For all our mornings together.'}
+const bouquetGift={...gift,wrap:'Midnight stars',fold:'Layered fan',flowers:[{...gift.flowers[0],position:{x:86,y:101,extra:true}},gift.flowers[1]],noteMode:'bouquet',bouquetNote:'For all our mornings together.'}
 await assert.rejects(save({...bouquetGift,noteMode:'invalid'},true))
 await assert.rejects(save({...bouquetGift,bouquetNote:'x'.repeat(1001)},true))
+await assert.rejects(save({...bouquetGift,flowers:[{...gift.flowers[0],position:{x:600,y:100}}]},true))
 await save(bouquetGift,true)
 assert.equal((await db.query('select data from public.gifts where id=$1',[giftId])).rows[0].data.flowers[0].note,'My favorite memory')
 await act('service_role')
 assert.equal((await read(token)).gift.bouquetNote,bouquetGift.bouquetNote)
 assert.equal((await read(token)).gift.flowers[0].note,'')
+assert.deepEqual((await read(token)).gift.flowers[0].position,{x:86,y:101})
+assert.equal((await read(token)).gift.fold,'Layered fan')
 await act('authenticated',owner)
 await save({...bouquetGift,noteMode:'flowers'},true)
 await act('service_role')

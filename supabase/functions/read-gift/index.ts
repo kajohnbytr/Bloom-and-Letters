@@ -21,8 +21,8 @@ Deno.serve(async request=>{
   if(error)return reply({message:'Could not load this gift.'},500)
   if(!data||data.pinRequired)return reply(data)
   if(input?.openLetter!==true){
-    const {flowers,wrap,ribbon,arrangement,recipient,sender,noteMode,bouquetNote}=data.gift
-    return reply({gift:{flowers,wrap,ribbon,arrangement,recipient,sender,noteMode,bouquetNote},photo:''})
+    const {flowers,wrap,fold,ribbon,arrangement,recipient,sender,noteMode,bouquetNote}=data.gift
+    return reply({gift:{flowers,wrap,fold,ribbon,arrangement,recipient,sender,noteMode,bouquetNote},photo:''})
   }
   if(data.photo){
     const {data:signed,error:photoError}=await db.storage.from('letter-photos').createSignedUrl(data.photo,120)
