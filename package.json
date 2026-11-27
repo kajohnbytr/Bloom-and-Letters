@@ -1,1 +1,36 @@
-{"name":"bloom-and-letter","version":"1.0.0","private":true,"type":"module","scripts":{"dev":"node node_modules/vite/bin/vite.js --configLoader runner","build":"node node_modules/typescript/bin/tsc --noEmit && node node_modules/vite/bin/vite.js build --configLoader runner","preview":"node node_modules/vite/bin/vite.js preview --configLoader runner","test":"node tests/database.mjs","test:browser":"node tests/browser.mjs","test:recipient":"node tests/recipient.mjs","test:publishing":"node tests/publishing.mjs"},"dependencies":{"@supabase/supabase-js":"^2.49.4","framer-motion":"^12.6.3","lucide-react":"^0.468.0","qrcode":"^1.5.4","react":"^19.0.0","react-dom":"^19.0.0","react-router-dom":"^7.5.0","zod":"^3.24.2"},"devDependencies":{"@electric-sql/pglite":"^0.6.0","@types/qrcode":"^1.5.5","@types/react":"^19.0.0","@types/react-dom":"^19.0.0","playwright":"^1.65.1","typescript":"^5.8.0","vite":"^6.2.0"}}
+{
+  "name": "bloom-and-letter",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node node_modules/vite/bin/vite.js --configLoader runner",
+    "build": "node node_modules/typescript/bin/tsc --noEmit && node node_modules/vite/bin/vite.js build --configLoader runner",
+    "preview": "node node_modules/vite/bin/vite.js preview --configLoader runner",
+    "test": "node tests/database.mjs",
+    "test:browser": "node tests/browser.mjs",
+    "test:recipient": "node tests/recipient.mjs",
+    "test:publishing": "node tests/publishing.mjs",
+    "format": "prettier --write ."
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.4",
+    "framer-motion": "^12.6.3",
+    "lucide-react": "^0.468.0",
+    "qrcode": "^1.5.4",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-router-dom": "^7.5.0",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.6.0",
+    "@types/qrcode": "^1.5.5",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "playwright": "^1.65.1",
+    "prettier": "^3.10.1",
+    "typescript": "^5.8.0",
+    "vite": "^6.2.0"
+  }
+}

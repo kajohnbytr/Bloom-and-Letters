@@ -1,76 +1,105 @@
 ﻿# Bloom & Letter
 
-Bloom & Letter is a React and TypeScript app for sending a bouquet with a personal letter. Pick individual stems in the garden, style the bouquet, write on custom stationery, and publish an unlisted gift link with a downloadable PNG QR code. Recipients open the garden, explore the bouquet, then open the envelope.
+**A digital bouquet and a personal letter, delivered together.**
 
-## Run locally
+Bloom & Letter turns a message into an interactive gift. Senders pick and arrange flowers, write on custom stationery, and share the finished gift with an unlisted link or a downloadable QR code. Recipients can explore the bouquet, open the envelope, and read the letter without creating an account.
 
-Use Node.js 22 or newer.
+## Features
+
+| For senders                                                                                    | For recipients                                                     |
+| ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| Pick eight flower varieties in the virtual garden                                              | Reveal the bouquet and explore flower meanings                     |
+| Arrange individual stems by dragging or using the keyboard                                     | Read flower notes or one note for the whole bouquet                |
+| Customize paper, wrapper shape, ribbon, and stationery                                         | Open the letter with the sender's bouquet still in view            |
+| Save drafts, attach a photo, and manage gifts in **My Letters**                                | Optionally take or choose a keepsake photo and download it locally |
+| Publish a link and QR code, schedule delivery, set an expiry date, add a PIN, or revoke access | Open active gifts on mobile or desktop without signing in          |
+
+## Quick start
+
+**Requirements:** Node.js 22 or newer and npm. Use PowerShell from the project folder on Windows.
 
 ```powershell
-npm ci
+npm.cmd ci
 Copy-Item .env.example .env.local
-npm run dev
+npm.cmd run dev
 ```
 
-The garden, bouquet editor, and letter preview work before connecting Supabase. An unsigned visitor's in-progress draft stays in that browser. Sign in to autosave to PostgreSQL, attach a photograph, or publish. To smoke-test the built app, run `npm run build` and `npm run preview -- --port 4173`.
+If `.env.local` already exists, skip the copy and edit the existing file. Open the local URL printed in the terminal. You can explore the garden, arrange a bouquet, and preview a letter before connecting Supabase. Guests' drafts stay in their browser.
 
-## Supabase setup
+### Connect Supabase
 
-1. Create or select a Supabase project. Install the Supabase CLI and authenticate in its own sign-in flow.
-2. Run `supabase link --project-ref YOUR_PROJECT_REF`, then `supabase db push`. The migration creates the gift tables, publishing and recipient RPCs, ownership policies, and a private image bucket.
-3. Run `supabase functions deploy read-gift --no-verify-jwt`. Unauthenticated recipients use this endpoint with the gift token. The Edge Function uses the Supabase runtime service role and returns only the gift presentation and, when the envelope opens, a short-lived signed photo URL.
-4. Enable email authentication and configure a production SMTP provider for sign-in links. In Auth URL Configuration, use the public frontend as the Site URL and allow its `/create` and `/letters` redirects. For local sign-in, also allow those routes on the local frontend origin.
-5. Add the variables below to `.env.local` and later to the frontend host. Rebuild after changing them.
+Create a Supabase project, then run these commands from the repository root. Replace `YOUR_PROJECT_REF` with the project reference.
 
-| Variable | Value |
-| --- | --- |
-| `VITE_SUPABASE_URL` | Project API URL |
-| `VITE_SUPABASE_ANON_KEY` | Browser-safe publishable or legacy anon key |
-| `VITE_PUBLIC_ORIGIN` | Canonical production HTTPS origin used in published links and QR codes |
+```powershell
+npx.cmd supabase@2 login
+npx.cmd supabase@2 link --project-ref YOUR_PROJECT_REF
+npx.cmd supabase@2 db push
+npx.cmd supabase@2 functions deploy read-gift --use-api --no-verify-jwt
+```
 
-Keep the Supabase service-role key in the Edge Function environment. All `VITE_` variables are public at build time. If the canonical origin is omitted, sharing uses the page origin, which is useful for a local test only.
+The migrations create the gift tables, ownership policies, and private `letter-photos` bucket. The `read-gift` function validates gift access for signed-out visitors and supplies a short-lived photo URL when the letter is opened.
 
-## Deploy
+Add these values to `.env.local` for local development and to Vercel for production.
 
-Import the checkout into Vercel as a Vite project. Use `npm run build` and output directory `dist`. Alternatively, use the same build and output settings on Netlify. The repository includes SPA fallback rules for both hosts so that directly opened gift URLs and refreshes work. Add the three variables before building, then make a test gift and verify its QR code on a separate device. Check revocation, scheduled opening, expiration, and direct-link refresh on the production domain.
+| Variable                 | Purpose                                                                                                                                                |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `VITE_SUPABASE_URL`      | Supabase project API URL                                                                                                                               |
+| `VITE_SUPABASE_ANON_KEY` | Supabase publishable key or legacy anon key                                                                                                            |
+| `VITE_PUBLIC_ORIGIN`     | Stable production origin for gift links and QR codes, such as `https://your-site.vercel.app`. Leave blank to use the current origin for local testing. |
 
-## How persistence works
+Restart the dev server after editing `.env.local`. Vite exposes `VITE_` variables in the browser, so keep service-role keys and SMTP passwords in Supabase.
 
-PostgreSQL stores owner-managed drafts in `gifts` and a separate immutable-until-republished snapshot in `gift_publications`. Letter and bouquet presentation settings are validated JSON snapshots with an ordered array of stems. Saving edits to an existing gift leaves the live snapshot intact until it is published again. Links use 32 random bytes encoded for URLs. Only authenticated owners can edit, delete, revoke, or restore a gift. Anyone with an active sharing link can open it while its delivery window is valid.
+In **Supabase → Authentication → URL Configuration**, set the production **Site URL** and allow the `/create` and `/letters` URLs on that origin. Add those same paths on your local origin if you want to test sign-in locally. Enable the **Email** provider and configure custom SMTP before opening registration to the public. The built-in email service is suitable for testing with Supabase team addresses.
 
-For photography, the private bucket accepts JPEG, PNG, and WebP up to 5 MB. Recipients receive signed URLs that expire after two minutes. Deleting a gift also attempts cleanup of its uploaded photos. An upload abandoned before the draft was saved can leave an unreferenced private object.
+## Deploy and update
 
-## Verification and known limitations
+The [click-by-click deployment guide](DEPLOYMENT-GUIDE.txt) covers GitHub, Supabase, Vercel, magic-link sign-in, and testing a gift on the live site.
 
-- `npm test` applies the migration in embedded PostgreSQL with Supabase role and Storage fixtures. It tests validation, token uniqueness, published snapshots, owner isolation, revocation, restore, scheduled access, expiration, and deletion.
-- `npm run test:browser` checks the built app on Edge at mobile, tablet, and desktop sizes. Start preview on port 4173 first. Set `TEST_ORIGIN` to use a different origin or `BROWSER_CHANNEL` to use installed Chrome.
-- Senders can add a 6–12 digit access PIN at publication. PostgreSQL stores a salted bcrypt hash and temporarily locks PIN checks for that gift after eight incorrect attempts in ten minutes.
-- To test the recipient UI with a mocked Edge Function, build with VITE_SUPABASE_URL set to https://bloom-test.supabase.co and VITE_SUPABASE_ANON_KEY set to qa-browser-key, serve the build, and run npm run test:recipient and npm run test:publishing. These values are for isolated tests only.
-- Hosted Supabase authentication, Storage, the Edge Function, and public deployment require project access and must be verified after setup.
+For Vercel, import the repository using the **Vite** preset, set the build command to `npm run build`, and set the output directory to `dist`. Add the production environment variables before deploying. The repository includes SPA routing rules for Vercel and Netlify so direct gift links work after a refresh.
 
+| Change                      | Deployment action                                 |
+| --------------------------- | ------------------------------------------------- |
+| Frontend or public assets   | Push to the production branch connected to Vercel |
+| Database migration          | Run `npx.cmd supabase@2 db push`                  |
+| Recipient Edge Function     | Run the `read-gift` deploy command above          |
+| Vercel environment variable | Update the value in Vercel and redeploy           |
 
+For a release that changes the database or Edge Function alongside the frontend, deploy the backend changes before pushing the frontend.
 
-## Add your GCash QR code
+### Buy Me a Coffee
 
-Save your public GCash receive-payment QR image as `public/gcash-qr.png`. Restart the development server or rebuild and redeploy the site. The footer links to the Buy Me a Coffee page, which will display the image automatically. Until an image is in place, the page shows that payment details are unavailable.
+The optional support panel appears after bouquet creation and links to the support page. Each uploaded QR code is shown with its payment provider label.
 
-If you prefer a different filename, set `VITE_GCASH_QR_URL` to the public path, such as `/my-gcash-qr.jpg`, and place that file in `public/`. The optional `VITE_GCASH_NAME` and `VITE_GCASH_NUMBER` values are visible to visitors when set.
+| Provider    | Image path                                     |
+| ----------- | ---------------------------------------------- |
+| GCash       | `public/gcash-qr.jpg` or `public/gcash-qr.png` |
+| MariBank    | `public/maribank-qr.jpg`                       |
+| GoTyme Bank | `public/go-tyme.jpg`                           |
 
-For an existing Supabase deployment, run `supabase db push` and redeploy `read-gift` when releasing the bouquet note options.
+Set `VITE_GCASH_QR_URL` to override the GCash image path. `VITE_GCASH_NAME` and `VITE_GCASH_NUMBER` are optional public display fields. Rebuild after replacing an image or changing these values.
 
-## Custom bouquets and recipient keepsakes
+## Architecture and privacy
 
-Drag a flower in the bouquet preview to move it. With the flower focused,
-use arrow keys for fine adjustments or Shift + arrow keys for larger moves.
-Reset flower positions returns to the selected preset. Wrapping paper and
-wrapper shape can be selected separately.
+- **Frontend** — React, TypeScript, Vite, React Router, Framer Motion, and SVG bouquet illustrations.
+- **Backend** — Supabase Auth, PostgreSQL, private Storage, and the `read-gift` Edge Function.
+- **Gift lifecycle** — Owner-managed drafts live in `gifts`. Recipients read the published snapshot in `gift_publications`, so draft edits stay private until republished.
+- **Access** — Gift links use URL-safe tokens generated from 32 random bytes. Scheduled availability, expiry, revocation, and optional PIN checks run server-side. PINs are hashed with bcrypt and temporarily locked after eight incorrect attempts in ten minutes.
+- **Photos** — Sender attachments support JPEG, PNG, and WebP up to 5 MB and are served through short-lived signed URLs. An abandoned upload can leave a private, unreferenced file. Recipient keepsake photos stay in the browser unless downloaded. The camera requires permission and HTTPS or localhost.
 
-The letter reveal includes the same bouquet that the sender arranged. The
-optional keepsake camera uses a secure connection (HTTPS or localhost) and
-requires browser permission. Recipients can use the device photo picker if
-the live camera is unavailable. Keepsake photos stay in the browser until
-downloaded and are never uploaded.
+## Testing
 
-For an existing deployment, apply the bouquet arrangement migration and
-redeploy read-gift before pushing the updated frontend. See Step 10 of
-DEPLOYMENT-GUIDE.txt.
+Build first, then run the preview server in a separate terminal for browser tests.
+
+```powershell
+npm.cmd run build
+npm.cmd run preview -- --port 4173
+```
+
+| Command                       | What it checks                                                                                                                  |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `npm.cmd test`                | Migrations, publication snapshots, note and arrangement settings, ownership, PINs, and link access rules in embedded PostgreSQL |
+| `npm.cmd run test:browser`    | Sender flow and responsive layout in Edge at mobile, tablet, and desktop sizes                                                  |
+| `npm.cmd run test:recipient`  | Recipient reveal, PIN entry, and keepsake camera with a mocked Supabase endpoint and simulated camera                           |
+| `npm.cmd run test:publishing` | Draft reload, publishing, sharing, and PNG QR download with mocked Supabase endpoints                                           |
+
+Set `TEST_ORIGIN` to override `http://localhost:4173` or `BROWSER_CHANNEL` to use a different installed browser. For the mocked recipient and publishing tests, build with `VITE_SUPABASE_URL=https://bloom-test.supabase.co` and `VITE_SUPABASE_ANON_KEY=qa-browser-key` set in the build terminal. Those values are for tests only. After deploying, verify actual email delivery, photo uploads, and gift links on the production site.
